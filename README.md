@@ -57,6 +57,10 @@ cd ros_splishsplash_integration
 ---
 
 ### Instalación Manual (Paso a Paso)
+```bash
+cd ~/gazebo
+gazebo pool_with_falling_box.sdf -g libFluidVisPlugin.so
+```
 
 #### Dependencias Base:
 ```bash

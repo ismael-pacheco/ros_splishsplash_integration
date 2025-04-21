@@ -4,6 +4,7 @@
 set -e
 
 echo "[1/5] Cloning SPlisHSPlasH repository..."
+cd ~
 git clone https://bitbucket.org/hbpneurorobotics/splishsplash.git SPlisHSPlasH
 cd SPlisHSPlasH
 

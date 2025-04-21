@@ -11,6 +11,7 @@ echo "[2/5] Removing existing ign-math packages..."
 sudo apt-get remove -y libignition-math6-dev
 
 echo "[3/5] Cloning ign-math repository..."
+cd ~
 git clone https://github.com/ignitionrobotics/ign-math -b ign-math6
 cd ign-math
 

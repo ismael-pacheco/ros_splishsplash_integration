@@ -6,6 +6,7 @@ set -e
 echo "[1/6] Configurando fuentes de ROS..."
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu focal main" > /etc/apt/sources.list.d/ros-latest.list'
 sudo apt install curl -y
+cd ~
 curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 
 echo "[2/6] Instalando ROS base (sin Gazebo)..."

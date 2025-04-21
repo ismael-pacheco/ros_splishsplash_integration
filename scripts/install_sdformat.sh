@@ -4,6 +4,7 @@
 set -e
 
 echo "[1/4] Cloning sdformat repository..."
+cd ~
 git clone https://github.com/osrf/sdformat -b sdf9
 cd sdformat
 
