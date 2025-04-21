@@ -114,15 +114,7 @@ ros_splishsplash_integration/
 
 ## 🖥️ Uso Básico
 
-### Ejecutar Simulación de Prueba:
-```bash
-roslaunch splishsplash_demo fluid_simulation.launch
-```
 
-### Verificar Instalación:
-```bash
-./scripts/verify_installation.sh
-```
 
 ---
 
@@ -142,7 +134,6 @@ rosdep check --from-paths src --ignore-src
 
 ### Canal de Soporte
 - Reportar *issues* vía GitHub
-- Foro de discusión: `#ros-splishsplash` en Discord
 
 ---
 
@@ -153,8 +144,6 @@ Este proyecto está bajo la licencia **MIT**.
 ---
 
 ### ⚠️ Notas Importantes
-- Todos los scripts requieren conexión a Internet estable  
-- ⏱️ Tiempos estimados en hardware medio (i7, 16GB RAM, SSD)  
 - 💡 Ejecutar `source ~/.bashrc` tras la instalación completa
 
 ---
