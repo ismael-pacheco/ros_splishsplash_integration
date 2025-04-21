@@ -2,8 +2,8 @@
 
 <p align="center">
   <img src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Ros_logo.svg" alt="ROS Logo" height="80"/>
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Gazebo_logo.svg/1200px-Gazebo_logo.svg.png" alt="Gazebo Logo" height="80"/>
-  <img src="https://hbpneurorobotics.files.wordpress.com/2017/10/splishsplash_logo.png" alt="SPlisHSPlasH Logo" height="80"/>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Gazebo_logo_without_text.svg" alt="Gazebo Logo" height="80"/>
+  <img src="https://raw.githubusercontent.com/InteractiveComputerGraphics/SPlisHSPlasH/master/doc/images/logo.jpg" alt="SPlisHSPlasH Logo" height="80"/>
 </p>
 
 > Paquete de integración para simulaciones de fluidos con **SPlisHSPlasH** en entornos **ROS/Gazebo**.
