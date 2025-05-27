@@ -6,8 +6,28 @@ set -e
 # Create log file
 LOGFILE="install_base.log"
 echo "Installation started at $(date)" > $LOGFILE
+timedatectl set-local-rtc 1
+sudo apt remove --purge cmake cmake-qt-gui cmake-data -y
+sudo rm -rf /usr/local/bin/cmake* /usr/local/share/cmake-*
+sudo apt update
+sudo apt install -y wget build-essential libssl-dev
+cd ~ 
+if [ ! -f "cmake-4.0.2.tar.gz" ]; then
+  wget https://cmake.org/files/v4.0/cmake-4.0.2.tar.gz
+  tar -xzf cmake-4.0.2.tar.gz
+else
+  tar -xzf cmake-4.0.2.tar.gz
+fi
 
+
+
+cd cmake-4.0.2
+./bootstrap --prefix=/usr/local
+make -j$(nproc)
+sudo make install
+cmake --version
 # 1. Configure Gazebo repo
+sudo add-apt-repository ppa:dartsim/ppa
 sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable focal main" > /etc/apt/sources.list.d/gazebo-stable.list'
 wget https://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 
@@ -81,8 +101,6 @@ sudo apt update && sudo apt install -y \
   libbullet-dev \
   libccd-dev \
   libcurl4-openssl-dev \
-  libdart6-dev \
-  libdart6-utils-urdf-dev \
   libdcmtk-dev \
   libdebconfclient0 \
   libdrm-dev \
@@ -139,7 +157,6 @@ sudo apt update && sudo apt install -y \
   libxmu-dev \
   libxrandr-dev \
   linux-generic-hwe-20.04 \
-  mainline \
   mokutil \
   mythes-en-au \
   mythes-en-us \
@@ -162,9 +179,6 @@ sudo apt update && sudo apt install -y \
   quilt \
   rdfind \
   ronn \
-  ros-noetic-ros-base \
-  ruby \
-  ruby-dev \
   shim-signed \
   software-properties-common \
   synaptic \
@@ -183,9 +197,11 @@ sudo apt update && sudo apt install -y \
   wget \
   wspanish \
   xsltproc
-  sudo apt update && sudo apt install -y \
+\
 
 echo "[1/8] Installing system dependencies..." | tee -a $LOGFILE
+  sudo apt update && sudo apt install -y 
+  libignition-transport8-dev\
   build-essential cmake pkg-config libboost-all-dev libprotobuf-dev protobuf-compiler \
   libqt5core5a qtbase5-dev libqt5widgets5 libtinyxml-dev libogre-1.9-dev \
   libfreeimage-dev libtbb-dev libtar-dev libgts-dev libavcodec-dev libavformat-dev \
@@ -196,19 +212,29 @@ echo "[1/8] Installing system dependencies..." | tee -a $LOGFILE
   wget libassimp-dev libccd-dev libfcl-dev liboctomap-dev libtinyxml2-dev \
   liburdfdom-dev liburdfdom-headers-dev libboost-system-dev libboost-filesystem-dev \
   libboost-program-options-dev libboost-test-dev libboost-thread-dev \
-  libopenscenegraph-dev libgl1-mesa-dev libfmt-dev ruby ruby-dev \
+  libopenscenegraph-dev libgl1-mesa-dev libfmt-dev\
   libignition-transport8-dev libqwt-qt5-dev libopenal-dev libusb-1.0-0-dev \
   libhdf5-dev libignition-msgs5-dev libgdal-dev graphviz xsltproc ronn \
   libxrandr-dev libxinerama-dev libxcursor-dev | tee -a $LOGFILE
 
-wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
-sudo apt update && sudo apt install -y cmake cmake-qt-gui
-
+  sudo ldconfig
 # 4. Install Eigen 3.4.0
-wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-tar -xzf eigen-3.4.0.tar.gz
-cd eigen-3.4.0 && mkdir build && cd build
+cd ~
+if [ ! -f "eigen-3.4.0.tar.gz" ]; then
+  wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+  tar -xzf eigen-3.4.0.tar.gz
+else
+  tar -xzf eigen-3.4.0.tar.gz
+fi
+
+cd eigen-3.4.0 
+if [ ! -d "build" ]; then
+  mkdir build && cd build
+else
+  cd build
+fi
+
+
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
 sudo make install && sudo ldconfig
 cd ~
@@ -223,29 +249,69 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
 # 6. Build and install FCL
 cd ~
-git clone https://github.com/flexible-collision-library/fcl.git
-cd fcl && git checkout v0.7.0
-mkdir build && cd build
+
+if [ ! -d "fcl" ]; then
+  git clone https://github.com/flexible-collision-library/fcl.git
+else
+  cd fcl
+  git checkout master
+  git pull
+  cd ~
+fi
+
+
+cd fcl && git checkout 0.7.0
+if [ ! -d "build" ]; then
+  mkdir build && cd build
+else
+  cd build
+fi
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
 make -j$(nproc)
 sudo make install
 
 # 7. Build and install Assimp
 sudo apt remove --purge libassimp-dev assimp-utils -y
-git clone https://github.com/assimp/assimp.git
-cd assimp && git checkout v5.2.5
-mkdir build && cd build
+
+if [ ! -d "assimp" ]; then
+  git clone https://github.com/assimp/assimp.git
+else
+  cd assimp && git checkout v5.2.5
+  git checkout master
+  git pull
+
+fi
+
+if [ ! -d "build" ]; then
+  mkdir build && cd build
+else
+  cd build
+fi
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
 make -j$(nproc)
 sudo make install
 export CMAKE_PREFIX_PATH="/usr/local:$CMAKE_PREFIX_PATH"
 source ~/.bashrc
 
-# 8. Build and install DART
+
 cd ~
-git clone https://github.com/dartsim/dart.git
-cd dart && mkdir build && cd build
-rm -rf CMakeCache.txt CMakeFiles/
+
+if [ ! -d "dart" ]; then
+  git clone https://github.com/dartsim/dart.git
+else
+  cd dart
+  git checkout main
+  git pull
+
+fi
+
+if [ ! -d "build" ]; then
+  mkdir build && cd build
+else
+  cd build
+  rm -rf CMakeCache.txt CMakeFiles/
+fi
+
 cmake .. \
   -DCMAKE_PREFIX_PATH="/usr/local" \
   -DCMAKE_MODULE_PATH="/usr/local/lib/cmake/assimp" \
@@ -253,6 +319,42 @@ cmake .. \
   -DASSIMP_LIBRARY="$(pkg-config --libs-only-L assimp | sed 's/-L//')/libassimp.so"
 make -j4
 sudo make install && sudo ldconfig
+
+
+# Actualizar caché de bibliotecas
+sudo ldconfig
+
+# Verificar versión instalada
+grep "set(PACKAGE_VERSION" /usr/local/share/dart/cmake/DARTConfigVersion.cmake
+
+sudo rm -rf /usr/local/bin/cmake* /usr/local/share/cmake-*  # Elimina instalación manual
+sudo apt remove --purge cmake cmake-qt-gui cmake-data -y    # Elimina versión de apt
+sudo apt autoremove -y
+
+cd ~
+
+if [ ! -f "cmake-3.16.0.tar.gz" ]; then
+cd ~
+else
+  rm ~/cmake-3.16.0.tar.gz
+fi
+
+if [ ! -f "cmake-3.16.0-Linux-x86_64.sh" ]; then
+  wget https://cmake.org/files/v3.16/cmake-3.16.0-Linux-x86_64.sh
+  chmod +x cmake-3.16.0-Linux-x86_64.sh
+  sudo ./cmake-3.16.0-Linux-x86_64.sh --skip-license --prefix=/usr/local
+else
+  chmod +x cmake-3.16.0-Linux-x86_64.sh
+  sudo ./cmake-3.16.0-Linux-x86_64.sh --skip-license --prefix=/usr/local
+fi
+
+
+
+
+
+
+echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
 
 # Additional build steps are handled by external scripts:
 # - install_gazebo.sh
