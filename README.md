@@ -11,148 +11,125 @@
 ---
 
 ## 📋 Tabla de Contenidos
-- [Requisitos Previos](#-requisitos-previos)
-- [Instalación](#-instalación)
-- [Mantenimiento](#-mantenimiento)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Uso Básico](#-uso-básico)
-- [Soporte Técnico](#-soporte-técnico)
-- [Licencia](#-licencia)
+
+* [Requisitos Previos](#-requisitos-previos)
+* [Instalación](#-instalación)
+* [Configuración y Uso](#-configuración-y-uso)
+* [Ejemplos de Simulación](#-ejemplos-de-simulación)
+* [Mantenimiento](#-mantenimiento)
+* [Estructura del Proyecto](#-estructura-del-proyecto)
+* [Licencia](#licencia)
 
 ---
 
-## 📦 Requisitos Previos
+## 📌 Requisitos Previos
 
-### Hardware
-- **Sistema Operativo:** Ubuntu 20.04 LTS  
-- **RAM:** 8GB mínimo (16GB recomendado)  
-- **Almacenamiento:** 20GB espacio libre  
-- **GPU:** NVIDIA con soporte CUDA (recomendado)
+* **Sistema Operativo:** Ubuntu 20.04 LTS
 
-### Software
-- Git `2.25+`  
-- CMake `3.16+`  
-- Python `3.8`
+> El resto de componentes se instalan automáticamente mediante los scripts listados a continuación.
 
 ---
 
 ## 🚀 Instalación
 
-### Clonación del Repositorio
+Clona el repositorio y ejecuta los scripts en el siguiente orden:
 
 ```bash
-git clone --recursive https://github.com/ismael-pacheco/ros_splishsplash_integration.git
-cd ros_splishsplash_integration
+cd ~/
+git clone https://github.com/ismael-pacheco/ros_splishsplash_integration.git
+cd ros_splishsplash_integration/scripts/
+
+./install_base.sh
+./install_ignition_math.sh
+./install_ruby.sh
+./install_sdformat.sh
+./install_gazebo.sh
+./install_ros.sh
+./install_iq_sim.sh
+./install_iq_gnc.sh
+./configure_ros_gazebo_local.sh
+./manage_bashrc_config.sh
+./install_splishsplash.sh
+./install_px4.sh
 ```
+
+> Cada script se encarga de instalar o configurar su componente correspondiente.
 
 ---
 
-### Instalación Automática (Modo Completo)
+## ⚙️ Configuración y Uso
 
-```bash
-# Ejecutar todos los scripts en orden (≈60-90 mins)
-./install_all.sh
-```
+### Setup del Entorno
 
----
+Para copiar los archivos de prueba y scripts adicionales a sus rutas adecuadas, ejecuta:
 
-### Instalación Manual (Paso a Paso)
-
-
-#### Dependencias Base:
-```bash
-./scripts/install_base.sh
-```
-
-#### Entorno ROS:
-```bash
-./scripts/install_ros.sh
-```
-
-#### Componentes de Simulación:
-```bash
-./scripts/install_gazebo.sh
-./scripts/install_splishsplash.sh
-```
-
-#### Configuración Final:
 ```bash
 ./scripts/setup_environment.sh
-source ~/.bashrc
+```
+
+Esto copiará:
+
+* **Escenarios Gazebo** (`.sdf`) desde `test files/gazebo/` a `~/gazebo/`
+* **Scripts de IQ\_GNC** desde `test files/iq_gnc/scripts/` a `~/catkin_ws/src/iq_gnc/scripts/`
+* **Código fuente de IQ\_GNC** desde `test files/iq_gnc/src/` a `~/catkin_ws/src/iq_gnc/src/`
+* **Launch files de PX4-Autopilot** desde `test files/PX4-Autopilot/launch/` a `~/PX4-Autopilot/launch/`
+
+---
+
+## 🧪 Ejemplos de Simulación
+
+* **Pool con caja que cae:** `gazebo/pool_with_falling_box.sdf`
+* **Rotura de presa en caja:** `gazebo/BoxDamBreak.sdf`
+* \*\*Ejecuta una simulación desde su directorio con el comando: \*\* `gazebo pool_with_falling_box.sdf -g libFluidVisPlugin.so`&#x20;
+
+Puedes lanzar estos ejemplos con el mismo launch:
+
+```bash
+roslaunch splishsplash_integration fluid_world.launch world:=<ruta_al_sdf>
 ```
 
 ---
 
-## 🔄 Mantenimiento
+## 🔧 Mantenimiento
 
-### Actualización del Sistema:
-```bash
-./scripts/update_repo.sh
-```
+* **Actualizar paquetes de sistema:**
 
-### Limpieza:
-```bash
-./scripts/clean_builds.sh
-```
+  ```bash
+  ./scripts/update_packages.sh
+  ```
+* **Actualizar repositorios locales:**
+
+  ```bash
+  ./scripts/update_repo.sh
+  ```
+* **Reconfigurar entorno tras cambios:**
+
+  ```bash
+  ./scripts/configure_ros_gazebo_local.sh
+  ```
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```
 ros_splishsplash_integration/
-├── scripts/               # Scripts de instalación
-│   ├── install_*.sh       # Scripts individuales
-│   └── update_repo.sh     # Actualizador
-├── backups/               # Copias de seguridad
-│   └── apt-packages_*.txt # Historial de paquetes
-├── config/                # Archivos de configuración
-├── docs/                  # Documentación técnica
-└── logs/                  # Registros de instalación
+├── scripts/                  # Scripts de instalación y configuración
+├── src/                      # Plugins y nodos ROS
+├── test files/               # Archivos de prueba (.sdf)
+├── README.md
+└── LICENSE
 ```
 
 ---
 
-## 🖥️ Uso Básico
-
-```bash
-cd ~/gazebo
-gazebo pool_with_falling_box.sdf -g libFluidVisPlugin.so
-```
-
----
-
-## ❓ Soporte Técnico
-
-### Diagnóstico de Problemas
-
-Consultar logs:
-```bash
-tail -n 50 logs/install_*.log
-```
-
-Verificar dependencias:
-```bash
-rosdep check --from-paths src --ignore-src
-```
-
-### Canal de Soporte
-- Reportar *issues* vía GitHub
-
----
-
-## 📜 Licencia
+## 📝 Licencia
 
 Este proyecto está bajo la licencia **MIT**.
 
 ---
 
 ### ⚠️ Notas Importantes
-- 💡 Ejecutar `source ~/.bashrc` tras la instalación completa
 
----
-
-<div align="center">
-  <sub>Creado con ❤️ por <a href="https://github.com/ismael-pacheco">Ismael Pacheco</a></sub>
-</div>
+* Ejecutar `source ~/.bashrc` tras cualquier instalación o actualización.
 

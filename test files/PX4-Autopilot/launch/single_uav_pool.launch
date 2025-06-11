@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- MAVROS posix SITL environment launch script -->
+    <!-- launches Gazebo environment with pool world and single UAV -->
+    
+    <!-- vehicle model and world -->
+    <arg name="est" default="ekf2"/>
+    <arg name="vehicle" default="iris"/>
+    <arg name="world" default="$(env HOME)/gazebo/pool_with_drone.sdf"/>
+    
+    <!-- gazebo configs -->
+    <arg name="gui" default="true"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+    <arg name="paused" default="false"/>
+    
+    <!-- Set environment variables for Gazebo -->
+    <env name="GAZEBO_MODEL_PATH" value="$(optenv GAZEBO_MODEL_PATH):$(find mavlink_sitl_gazebo)/models"/>
+    <env name="GAZEBO_PLUGIN_PATH" value="$(optenv GAZEBO_PLUGIN_PATH):$(find mavlink_sitl_gazebo)/plugins"/>
+    
+    <!-- Launch Gazebo server -->
+    <node name="gazebo" pkg="gazebo_ros" type="gzserver" respawn="false" output="screen"
+          args="$(arg world) --verbose">
+        <!-- Los parámetros están definidos en el SDF -->
+    </node>
+    
+    <!-- Launch Gazebo client -->
+    <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen"
+          if="$(arg gui)"/>
+    
+    <!-- Single UAV positioned outside the pool area -->
+    <group ns="uav0">
+        <!-- MAVROS and vehicle configs -->
+        <arg name="ID" value="0"/>
+        <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
+        
+        <!-- PX4 SITL and vehicle spawn -->
+        <!-- Position: x=8, y=0, z=2 (outside the 10x10 pool, at safe altitude) -->
+        <include file="$(find px4)/launch/single_vehicle_spawn.launch">
+            <arg name="x" value="0"/>
+            <arg name="y" value="0"/>
+            <arg name="z" value="5"/>
+            <arg name="R" value="0"/>
+            <arg name="P" value="0"/>
+            <arg name="Y" value="0"/>
+            <arg name="vehicle" value="$(arg vehicle)"/>
+            <arg name="mavlink_udp_port" value="14560"/>
+            <arg name="mavlink_tcp_port" value="4560"/>
+            <arg name="ID" value="$(arg ID)"/>
+            <arg name="gst_udp_port" value="$(eval 5600 + arg('ID'))"/>
+            <arg name="video_uri" value="$(eval 5600 + arg('ID'))"/>
+            <arg name="mavlink_cam_udp_port" value="$(eval 14530 + arg('ID'))"/>
+        </include>
+        
+        <!-- MAVROS -->
+        <include file="$(find mavros)/launch/px4.launch">
+            <arg name="fcu_url" value="$(arg fcu_url)"/>
+            <arg name="gcs_url" value=""/>
+            <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+            <arg name="tgt_component" value="1"/>
+            <arg name="log_output" value="screen"/>
+        </include>
+    </group>
+    
+    <!-- Delay to ensure everything is loaded before setting physics -->
+    <node pkg="rosservice" type="rosservice" name="set_physics_properties" 
+          args="call --wait /gazebo/set_physics_properties 
+                '{time_step: 0.004, 
+                  max_update_rate: 250.0, 
+                  gravity: {x: 0.0, y: 0.0, z: -9.81}, 
+                  ode_config: {auto_disable_bodies: false}}'"
+          launch-prefix="bash -c 'sleep 3; $0 $@'"
+          output="screen"/>
+          
+    <node pkg="rosservice" type="rosservice" name="gazebo_unpause_delay" 
+          args="call --wait /gazebo/unpause_physics"
+          launch-prefix="bash -c 'sleep 8; $0 $@'"
+          output="screen"/>
+          
+    <!-- Optional: Add a timer to check if fluid plugin loaded -->
+    <node pkg="rostopic" type="rostopic" name="check_fluid_plugin"
+          args="echo /gazebo/fluid_info -n 1"
+          launch-prefix="bash -c 'sleep 10; $0 $@'"
+          output="screen"/>
+</launch>

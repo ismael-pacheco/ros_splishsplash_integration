@@ -38,7 +38,8 @@ sudo apt-get install -y \
   libignition-msgs5-dev \
   libignition-common3-dev \
   libignition-fuel-tools4-dev \
-  libignition-common3-graphics-dev libignition-common3-dev
+  libignition-common3-graphics-dev libignition-common3-dev\
+  nvidia-cuda-toolkit
 
 echo "[4/7] Configuring DART paths..."
 # Create symlinks if they don't exist
@@ -69,6 +70,7 @@ cmake \
   -DCMAKE_PREFIX_PATH="/usr/local/lib/cmake"\
   -DUSE_AVX=On \
   -DUSE_OpenMP=On \
+  -DUSE_GPU_NEIGHBORHOOD_SEARCH=On\
   ..
 
 echo "[5/6] Compiling..."

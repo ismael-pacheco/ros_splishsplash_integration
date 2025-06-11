@@ -1,42 +1,48 @@
 #!/bin/bash
-# install_ros.sh - Instala ROS Noetic con herramientas para desarrollo de paquetes (sin Gazebo)
+# install_ros.sh - Instala ROS Noetic sin Gazebo, iq_sim, Ardupilot y su plugin para Gazebo
 
 set -e
-
-echo "[1/6] Configurando fuentes de ROS..."
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu focal main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo apt install curl -y
-cd ~
-curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-
-echo "[2/6] Instalando ROS base (sin Gazebo)..."
+echo "[INFO] Instalando ROS Noetic (sin Gazebo)..."
 sudo apt update
-sudo apt install -y ros-noetic-ros-base
-
-echo "[3/6] Instalando herramientas de desarrollo y dependencias de construcción de paquetes..."
-sudo apt install -y \
-  python3-rosdep \
-  python3-rosinstall \
-  python3-rosinstall-generator \
-  python3-wstool \
-  python3-rosdep \
-  python3-colcon-common-extensions \
-  build-essential \
-  python3-catkin-tools \
-  python3-pip \
-  python3-vcstool \
-  cmake
-
-echo "[4/6] Inicializando rosdep..."
-sudo rosdep init || echo "rosdep ya inicializado."
+sudo apt install -y curl gnupg2 lsb-release
+# Añadir repositorio ROS
+sudo sh -c 'echo \"deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main\" > /etc/apt/sources.list.d/ros1-latest.list'
+curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+sudo apt update
+# Instalar ROS base (sin gazebo)
+sudo apt install -y ros-noetic-ros-base python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+# Inicializar rosdep
+sudo rosdep init || true
 rosdep update
 
-echo "[5/6] Añadiendo entorno ROS al bashrc..."
-if ! grep -Fxq "source /opt/ros/noetic/setup.bash" ~/.bashrc
-then
-  echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
-fi
-source ~/.bashrc
+echo "[INFO] Instalando iq_sim y dependencias..."
+# iq_sim depende de estos paquetes
+sudo apt install -y ros-noetic-joy ros-noetic-xacro ros-noetic-gazebo-plugins
 
-echo "[6/6] ROS Noetic instalado correctamente. Listo para crear workspaces."
+echo "[INFO] Clonando e instalando ArduPilot y plugin Gazebo..."
+# ArduPilot
+ARDUPILOT_DIR=~/ardupilot
+if [ -d \"$ARDUPILOT_DIR\" ]; then
+  cd \"$ARDUPILOT_DIR\" && git pull
+else
+  git clone https://github.com/ArduPilot/ardupilot.git \"$ARDUPILOT_DIR\"
+  cd \"$ARDUPILOT_DIR\"
+fi
+# Plugin Gazebo para ArduPilot
+cd Tools/sitl_gazebo
+git submodule update --init --recursive
+./setup_gazebo.sh
+pip3 install --user -r python_requirements.txt
+
+echo "[INFO] Configuración de entorno..."
+cat <<EOF >> ~/.bashrc
+
+# ROS Noetic
+source /opt/ros/noetic/setup.bash
+# IQ_Sim y ArduPilot SITL
+export PATH=\"\$PATH:$ARDUPILOT_DIR/Tools/autotest\"
+export GAZEBO_PLUGIN_PATH=\"$ARDUPILOT_DIR/Tools/sitl_gazebo/build\"\nEOF
+
+source ~/.bashrc
+echo "[INFO] Instalación ROS e IQ_Sim completada."
 
