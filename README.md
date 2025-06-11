@@ -1,11 +1,5 @@
 # ROS + SPlisHSPlasH Integration Suite
 
-<p align="center">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/b/bb/Ros_logo.svg" alt="ROS Logo" height="80"/>
-  <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Gazebo_logo_without_text.svg" alt="Gazebo Logo" height="80"/>
-  <img src="https://raw.githubusercontent.com/InteractiveComputerGraphics/SPlisHSPlasH/master/doc/images/logo.jpg" alt="SPlisHSPlasH Logo" height="80"/>
-</p>
-
 > Paquete de integración para simulaciones de fluidos con **SPlisHSPlasH** en entornos **ROS/Gazebo**.
 
 ---
@@ -69,7 +63,7 @@ Para copiar los archivos de prueba y scripts adicionales a sus rutas adecuadas, 
 
 Esto copiará:
 
-* **Escenarios Gazebo** (`.sdf`) desde `test files/gazebo/` a `~/gazebo/`
+* **Escenarios Gazebo** (`.sdf`) desde `test files/gazebo/` a `ros_splishsplash_integration/launch/worlds/`
 * **Scripts de IQ\_GNC** desde `test files/iq_gnc/scripts/` a `~/catkin_ws/src/iq_gnc/scripts/`
 * **Código fuente de IQ\_GNC** desde `test files/iq_gnc/src/` a `~/catkin_ws/src/iq_gnc/src/`
 * **Launch files de PX4-Autopilot** desde `test files/PX4-Autopilot/launch/` a `~/PX4-Autopilot/launch/`
@@ -80,7 +74,7 @@ Esto copiará:
 
 * **Pool con caja que cae:** `gazebo/pool_with_falling_box.sdf`
 * **Rotura de presa en caja:** `gazebo/BoxDamBreak.sdf`
-* \*\*Ejecuta una simulación desde su directorio con el comando: \*\* `gazebo pool_with_falling_box.sdf -g libFluidVisPlugin.so`&#x20;
+* **Ejecuta una simulación desde su directorio con el comando:** `gazebo pool_with_falling_box.sdf -g libFluidVisPlugin.so`
 
 Puedes lanzar estos ejemplos con el mismo launch:
 
@@ -115,21 +109,103 @@ roslaunch splishsplash_integration fluid_world.launch world:=<ruta_al_sdf>
 ```
 ros_splishsplash_integration/
 ├── scripts/                  # Scripts de instalación y configuración
-├── src/                      # Plugins y nodos ROS
-├── test files/               # Archivos de prueba (.sdf)
+│   ├── install_*.sh         # Instaladores de dependencias y componentes
+│   ├── configure_*.sh       # Configuración de entorno y ROS/Gazebo local
+│   └── update_*.sh          # Actualización de paquetes y repositorios
+├── test files/               # Archivos de prueba originales
+│   ├── gazebo/               # Escenarios .sdf
+│   ├── iq_gnc/               # Código y scripts de IQ_GNC
+│   └── PX4-Autopilot/        # Launch files de PX4-Autopilot
 ├── README.md
 └── LICENSE
 ```
 
----
-
-## 📝 Licencia
-
-Este proyecto está bajo la licencia **MIT**.
+> El workspace Catkin se crea en `~/catkin_ws` e incluye el paquete `iq_gnc` tras ejecutar los instaladores correspondientes.
 
 ---
 
-### ⚠️ Notas Importantes
 
-* Ejecutar `source ~/.bashrc` tras cualquier instalación o actualización.
+## 🚩 Ejecución de Archivos de Prueba
+
+### Control Avanzado
+
+1. **Lanzar SITL**
+
+   ```bash
+   ./startsitl.sh
+   ```
+2. **Iniciar simulación de pista**
+
+   ```bash
+   roslaunch iq_sim runway.launch
+   ```
+3. **Lanzar ArduPilot/MAVROS**
+
+   ```bash
+   roslaunch iq_sim apm.launch
+   ```
+
+   Espera a que las IMUs cambien a modo GPS y luego cambia a `GUIDED`.
+4. **Ejecutar nodos de control y gráficas**
+
+   ```bash
+   rosrun iq_gnc circleArdu
+   rosrun iq_gnc plot_adaptive_and_trajectory.py
+   ```
+
+### Control SMA (Swarm Multi-Agent)
+
+```bash
+cd ~/PX4-Autopilot
+source Tools/simulation/gazebo-classic/setup_gazebo.bash $(pwd) $(pwd)/build/px4_sitl_default
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:$(pwd):$(pwd)/Tools/simulation/gazebo-classic
+reset
+roslaunch px4 multi_uav_custom.launch
+```
+
+En otra terminal:
+
+```bash
+roslaunch iq_gnc multi_agent.launch
+```
+
+Y en otra:
+
+```bash
+rosrun iq_gnc error_plotter.py
+```
+
+---
+
+## 🛠️ Modificación de CMakeLists.txt
+
+En el `CMakeLists.txt` de `iq_gnc`, asegúrate de agregar los ejecutables de los nodos de forma individual, por ejemplo:
+
+```cmake
+## Add executables for follower nodes
+add_executable(follower_node1 src/follower_node1.cpp)
+add_dependencies(follower_node1 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(follower_node1 ${catkin_LIBRARIES})
+
+add_executable(follower_node2 src/follower_node2.cpp)
+add_dependencies(follower_node2 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(follower_node2 ${catkin_LIBRARIES})
+
+add_executable(follower_node3 src/follower_node3.cpp)
+add_dependencies(follower_node3 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(follower_node3 ${catkin_LIBRARIES})
+
+add_executable(follower_node4 src/follower_node4.cpp)
+add_dependencies(follower_node4 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(follower_node4 ${catkin_LIBRARIES})
+
+## Opcional: Trajectory nodedd_executable(circle_node src/circle.cpp)
+add_dependencies(circle_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(circle_node ${catkin_LIBRARIES})
+
+## Opcional: Formation monitor
+add_executable(formation_monitor src/formation_monitor.cpp)
+add_dependencies(formation_monitor ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(formation_monitor ${catkin_LIBRARIES})
+```
 
