@@ -214,5 +214,13 @@ target_link_libraries(circle_node ${catkin_LIBRARIES})
 add_executable(formation_monitor src/formation_monitor.cpp)
 add_dependencies(formation_monitor ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(formation_monitor ${catkin_LIBRARIES})
+
+## Instalar los scripts Python (plot_adaptive_and_trajectory.py) como ejecutable ROS
+catkin_install_python(PROGRAMS
+  scripts/plot_adaptive_and_trajectory.py
+  scripts/error_plotter.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 ```
 
