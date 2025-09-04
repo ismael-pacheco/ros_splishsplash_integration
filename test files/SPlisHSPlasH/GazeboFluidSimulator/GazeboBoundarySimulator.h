@@ -5,6 +5,8 @@
 #include "GazeboRigidBody.h"
 #include <fstream>
 #include <iomanip>
+#include <ctime>
+#include <sstream>
 
 #include "gazebo/gazebo.hh"
 #include "gazebo/util/system.hh"

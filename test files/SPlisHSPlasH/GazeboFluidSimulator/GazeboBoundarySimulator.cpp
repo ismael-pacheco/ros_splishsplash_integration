@@ -21,15 +21,22 @@ GazeboBoundarySimulator::GazeboBoundarySimulator(GazeboSimulatorBase *base)
 	m_csvHeaderWritten = false;
 	m_frameCounter = 0;
 	
-	// Inicializar archivo CSV automáticamente
-	m_csvFile.open("forces_torques_export.csv", std::ios::out | std::ios::trunc);
+	// Generar nombre único con timestamp
+	auto now = std::time(nullptr);
+	auto tm = *std::localtime(&now);
+	std::ostringstream filename;
+	filename << "forces_torques_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".csv";
+	std::string csvFilename = filename.str();
+	
+	// Inicializar archivo CSV con nombre único
+	m_csvFile.open(csvFilename, std::ios::out | std::ios::trunc);
 	if (m_csvFile.is_open())
 	{
-		LOG_INFO << "CSV export initialized: forces_torques_export.csv";
+		LOG_INFO << "CSV export initialized: " << csvFilename;
 	}
 	else
 	{
-		LOG_WARN << "Failed to open CSV file for writing";
+		LOG_WARN << "Failed to open CSV file for writing: " << csvFilename;
 	}
 }
 
@@ -129,7 +136,6 @@ void GazeboBoundarySimulator::updateBoundaryForces()
 		}
 	}
 }
-
 
 void GazeboBoundarySimulator::timeStep()
 {
