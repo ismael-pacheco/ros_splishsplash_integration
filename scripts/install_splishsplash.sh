@@ -70,7 +70,6 @@ cmake \
   -DCMAKE_PREFIX_PATH="/usr/local/lib/cmake"\
   -DUSE_AVX=On \
   -DUSE_OpenMP=On \
-  -DUSE_GPU_NEIGHBORHOOD_SEARCH=On\
   ..
 
 echo "[5/6] Compiling..."
