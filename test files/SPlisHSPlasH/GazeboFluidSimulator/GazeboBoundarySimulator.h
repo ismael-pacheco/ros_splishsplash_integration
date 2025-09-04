@@ -3,6 +3,8 @@
 
 #include "Simulator/BoundarySimulator.h"
 #include "GazeboRigidBody.h"
+#include <fstream>
+#include <iomanip>
 
 #include "gazebo/gazebo.hh"
 #include "gazebo/util/system.hh"
@@ -19,7 +21,14 @@ namespace SPH
 	{
 	protected:
 		GazeboSimulatorBase *m_base;
+		
+		// CSV export members
+		std::ofstream m_csvFile;
+		bool m_csvHeaderWritten;
+		unsigned int m_frameCounter;
+		
 		void loadObj(const std::string &filename, TriangleMesh &mesh, const Vector3r &scale);
+		void exportForcesTorquesToCSV();
 
 	public:
 		GazeboBoundarySimulator(GazeboSimulatorBase *base);
@@ -32,4 +41,3 @@ namespace SPH
 }
 
 #endif
-

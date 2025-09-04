@@ -18,18 +18,97 @@ using namespace Utilities;
 GazeboBoundarySimulator::GazeboBoundarySimulator(GazeboSimulatorBase *base)
 {
 	m_base = base;
+	m_csvHeaderWritten = false;
+	m_frameCounter = 0;
+	
+	// Inicializar archivo CSV automáticamente
+	m_csvFile.open("forces_torques_export.csv", std::ios::out | std::ios::trunc);
+	if (m_csvFile.is_open())
+	{
+		LOG_INFO << "CSV export initialized: forces_torques_export.csv";
+	}
+	else
+	{
+		LOG_WARN << "Failed to open CSV file for writing";
+	}
 }
 
 GazeboBoundarySimulator::~GazeboBoundarySimulator()
 {
+	if (m_csvFile.is_open())
+	{
+		m_csvFile.close();
+		LOG_INFO << "CSV export finalized. Total frames exported: " << m_frameCounter;
+	}
+}
+
+void GazeboBoundarySimulator::exportForcesTorquesToCSV()
+{
+	if (!m_csvFile.is_open())
+		return;
+		
+	// Escribir header solo una vez
+	if (!m_csvHeaderWritten)
+	{
+		m_csvFile << "Frame,Time,ObjectID,ObjectName,";
+		m_csvFile << "Force_X,Force_Y,Force_Z,Force_Magnitude,";
+		m_csvFile << "Torque_X,Torque_Y,Torque_Z,Torque_Magnitude,";
+		m_csvFile << "Position_X,Position_Y,Position_Z" << std::endl;
+		m_csvHeaderWritten = true;
+	}
+	
+	Real currentTime = TimeManager::getCurrent()->getTime();
+	Simulation *sim = Simulation::getCurrent();
+	const unsigned int nObjects = sim->numberOfBoundaryModels();
+	
+	for (unsigned int i = 0; i < nObjects; i++)
+	{
+		BoundaryModel *bm = sim->getBoundaryModel(i);
+		GazeboRigidBody *rbo = dynamic_cast<GazeboRigidBody *>(bm->getRigidBodyObject());
+		
+		if (rbo && rbo->isDynamic())
+		{
+			gazebo::physics::CollisionPtr gazeboCollision = rbo->getGazeboCollision();
+			Vector3r force, torque;
+			bm->getForceAndTorque(force, torque);
+			
+			// Calcular magnitudes
+			Real forceMagnitude = force.norm();
+			Real torqueMagnitude = torque.norm();
+			
+			// Obtener posición
+			Vector3r position = rbo->getPosition();
+			
+			// Obtener nombre del objeto
+			std::string objectName = "Unknown";
+			if (gazeboCollision && gazeboCollision->GetModel())
+			{
+				objectName = gazeboCollision->GetModel()->GetName();
+			}
+			
+			// Escribir datos al CSV
+			m_csvFile << std::fixed << std::setprecision(6);
+			m_csvFile << m_frameCounter << "," << currentTime << "," << i << "," << objectName << ",";
+			m_csvFile << force[0] << "," << force[1] << "," << force[2] << "," << forceMagnitude << ",";
+			m_csvFile << torque[0] << "," << torque[1] << "," << torque[2] << "," << torqueMagnitude << ",";
+			m_csvFile << position[0] << "," << position[1] << "," << position[2] << std::endl;
+		}
+	}
+	
+	// Asegurar que los datos se escriban inmediatamente
+	m_csvFile.flush();
 }
 
 void GazeboBoundarySimulator::updateBoundaryForces()
 {
 	Real h = TimeManager::getCurrent()->getTimeStepSize();
 	Simulation *sim = Simulation::getCurrent();
-	//GazeboSceneLoader::Scene &scene = getScene();
 	const unsigned int nObjects = sim->numberOfBoundaryModels();
+	
+	// Exportar fuerzas y torques ANTES de aplicarlos (para capturar los valores calculados)
+	exportForcesTorquesToCSV();
+	m_frameCounter++;
+	
 	for (unsigned int i = 0; i < nObjects; i++)
 	{
 		BoundaryModel *bm = sim->getBoundaryModel(i);
@@ -38,17 +117,19 @@ void GazeboBoundarySimulator::updateBoundaryForces()
 		{
 			gazebo::physics::CollisionPtr gazeboCollision = rbo->getGazeboCollision();
 			Vector3r force, torque;
-			// change rigid body fluid position?
 			bm->getForceAndTorque(force, torque);
+			
 			const ignition::math::Vector3d gazeboForce = ignition::math::Vector3d(force[0], force[1], force[2]);
 			const ignition::math::Vector3d gazeboTorque = ignition::math::Vector3d(torque[0], torque[1], torque[2]);
+			
 			gazeboCollision->GetLink()->AddForce(gazeboForce);
-		
-     		gazeboCollision->GetLink()->AddTorque(gazeboTorque);
+			gazeboCollision->GetLink()->AddTorque(gazeboTorque);
+			
 			bm->clearForceAndTorque();
 		}
 	}
 }
+
 
 void GazeboBoundarySimulator::timeStep()
 {
