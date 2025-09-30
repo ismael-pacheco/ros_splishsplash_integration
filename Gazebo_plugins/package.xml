@@ -1,0 +1,14 @@
+<package format="2">
+  <name>rotor_wrench_plugin</name>
+  <version>0.0.1</version>
+  <description>Gazebo plugin para aplicar wrenches a rotores</description>
+
+  <maintainer email="tucorreo@example.com">Tu Nombre</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>geometry_msgs</depend>
+</package>
+
