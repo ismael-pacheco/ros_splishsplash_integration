@@ -184,100 +184,137 @@ void GazeboBoundarySimulator::loadObj(const std::string &filename, TriangleMesh 
 
 void GazeboBoundarySimulator::initBoundaryData()
 {
-	const std::string &sceneFile = GazeboSceneConfiguration::getCurrent()->getSceneFile();
-	const Utilities::GazeboSceneLoader::Scene &scene = GazeboSceneConfiguration::getCurrent()->getScene();
-	Simulation *sim = Simulation::getCurrent();
-	for (unsigned int i = 0; i < scene.boundaryModels.size(); i++)
-	{
-		GazeboRigidBody *rigidBody = new GazeboRigidBody();
-		rigidBody->setGazeboCollision(scene.boundaryModels[i]->rigidBody);
-		if (scene.boundaryModels[i]->rigidBody->GetModel()->GetSDF()->HasElement("static"))
-		{
-			rigidBody->setDynamic(scene.boundaryModels[i]->dynamic);
-			std::cout << scene.boundaryModels[i]->rigidBody->GetModel()->GetName() << "is dynamic " << scene.boundaryModels[i]->dynamic << std::endl;
-		}
-		TriangleMesh &geo = rigidBody->getGeometry();
-		loadObj(scene.boundaryModels[i]->objFilePath, geo, scene.boundaryModels[i]->scale);
+    const std::string &sceneFile = GazeboSceneConfiguration::getCurrent()->getSceneFile();
+    const Utilities::GazeboSceneLoader::Scene &scene = GazeboSceneConfiguration::getCurrent()->getScene();
+    Simulation *sim = Simulation::getCurrent();
+    
+    LOG_INFO << "======================================================";
+    LOG_INFO << "Initializing boundary data";
+    LOG_INFO << "Default boundary particle radius: " << scene.boundaryParticleRadius;
+    LOG_INFO << "Custom radii registered: " << scene.customBoundaryRadii.size();
+    
+    // Mostrar todos los radios personalizados registrados
+    for (const auto& pair : scene.customBoundaryRadii)
+    {
+        LOG_INFO << "  - Model '" << pair.first << "': " << pair.second;
+    }
+    LOG_INFO << "======================================================";
+    
+    for (unsigned int i = 0; i < scene.boundaryModels.size(); i++)
+    {
+        GazeboRigidBody *rigidBody = new GazeboRigidBody();
+        rigidBody->setGazeboCollision(scene.boundaryModels[i]->rigidBody);
+        
+        std::string modelName = scene.boundaryModels[i]->rigidBody->GetModel()->GetName();
+        
+        if (scene.boundaryModels[i]->rigidBody->GetModel()->GetSDF()->HasElement("static"))
+        {
+            rigidBody->setDynamic(scene.boundaryModels[i]->dynamic);
+            std::cout << modelName << " is dynamic: " << scene.boundaryModels[i]->dynamic << std::endl;
+        }
+        
+        TriangleMesh &geo = rigidBody->getGeometry();
+        loadObj(scene.boundaryModels[i]->objFilePath, geo, scene.boundaryModels[i]->scale);
 
-		std::vector<Vector3r> boundaryParticles;
-		if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Akinci2012)
-		{
-			const auto samplePoissonDisk = [&]() {
-				LOG_INFO << "Poisson disk surface sampling of " << scene.boundaryModels[i]->objFilePath;
-				START_TIMING("Poisson disk sampling");
-				PoissonDiskSampling sampling;
-				sampling.sampleMesh(geo.numVertices(), geo.getVertices().data(), geo.numFaces(), geo.getFaces().data(), scene.particleRadius, 10, 1, boundaryParticles);
-				STOP_TIMING_AVG;
-			};
-			const auto sampleRegularTriangle = [&]() {
-				LOG_INFO << "Regular triangle surface sampling of " << scene.boundaryModels[i]->objFilePath;
-				START_TIMING("Regular triangle sampling");
-				RegularTriangleSampling sampling;
-				sampling.sampleMesh(geo.numVertices(), geo.getVertices().data(), geo.numFaces(), geo.getFaces().data(), 1.5f * scene.particleRadius, boundaryParticles);
-				STOP_TIMING_AVG;
-			};
-			if (SurfaceSamplingMode::PoissonDisk == scene.boundaryModels[i]->samplingMode)
-				samplePoissonDisk();
-			else if (SurfaceSamplingMode::RegularTriangle == scene.boundaryModels[i]->samplingMode)
-				sampleRegularTriangle();
-			else
-			{
-				LOG_WARN << "Unknown surface sampling method: " << scene.boundaryModels[i]->samplingMode;
-				LOG_WARN << "Falling back to:";
-				sampleRegularTriangle();
-			}
+        std::vector<Vector3r> boundaryParticles;
+        if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Akinci2012)
+        {
+            // *** USAR EL RADIO ESPECÍFICO DE ESTE BOUNDARY ***
+            const Real boundaryRadius = scene.boundaryModels[i]->boundaryParticleRadius;
+            
+            LOG_INFO << "==================================================";
+            LOG_INFO << "Processing boundary #" << i << ": " << modelName;
+            LOG_INFO << "Mesh file: " << scene.boundaryModels[i]->objFilePath;
+            LOG_INFO << "Boundary particle radius: " << boundaryRadius;
+            LOG_INFO << "Using custom radius: " << (scene.boundaryModels[i]->useCustomRadius ? "YES" : "NO");
+            
+            const auto samplePoissonDisk = [&]() {
+                LOG_INFO << "Method: Poisson disk surface sampling";
+                START_TIMING("Poisson disk sampling");
+                PoissonDiskSampling sampling;
+                sampling.sampleMesh(geo.numVertices(), geo.getVertices().data(), 
+                                  geo.numFaces(), geo.getFaces().data(), 
+                                  boundaryRadius,  // *** USAR EL RADIO CORRECTO ***
+                                  10, 1, boundaryParticles);
+                STOP_TIMING_AVG;
+            };
+            
+            const auto sampleRegularTriangle = [&]() {
+                LOG_INFO << "Method: Regular triangle surface sampling";
+                START_TIMING("Regular triangle sampling");
+                RegularTriangleSampling sampling;
+                sampling.sampleMesh(geo.numVertices(), geo.getVertices().data(), 
+                                  geo.numFaces(), geo.getFaces().data(), 
+                                  1.5f * boundaryRadius,  // *** USAR EL RADIO CORRECTO ***
+                                  boundaryParticles);
+                STOP_TIMING_AVG;
+            };
+            
+            if (SurfaceSamplingMode::PoissonDisk == scene.boundaryModels[i]->samplingMode)
+                samplePoissonDisk();
+            else if (SurfaceSamplingMode::RegularTriangle == scene.boundaryModels[i]->samplingMode)
+                sampleRegularTriangle();
+            else
+            {
+                LOG_WARN << "Unknown surface sampling method: " << scene.boundaryModels[i]->samplingMode;
+                LOG_WARN << "Falling back to Regular Triangle sampling";
+                sampleRegularTriangle();
+            }
 
-			// transform particles
-			if (!rigidBody->isDynamic())
-			{
-				for (unsigned int j = 0; j < (unsigned int)boundaryParticles.size(); j++)
-					boundaryParticles[j] = scene.boundaryModels[i]->rotation * boundaryParticles[j] + scene.boundaryModels[i]->translation;
-			}
-		}
+            LOG_INFO << "Generated particles: " << boundaryParticles.size();
+            LOG_INFO << "==================================================\n";
 
-		rigidBody->setWorldSpacePosition(scene.boundaryModels[i]->translation);
-		rigidBody->setWorldSpaceRotation(scene.boundaryModels[i]->rotation);
-		rigidBody->setPosition(scene.boundaryModels[i]->translation);
-		rigidBody->setRotation(scene.boundaryModels[i]->rotation);
+            // transform particles
+            if (!rigidBody->isDynamic())
+            {
+                for (unsigned int j = 0; j < (unsigned int)boundaryParticles.size(); j++)
+                    boundaryParticles[j] = scene.boundaryModels[i]->rotation * boundaryParticles[j] + 
+                                          scene.boundaryModels[i]->translation;
+            }
+        }
 
-		if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Akinci2012)
-		{
-			BoundaryModel_Akinci2012 *bm = new BoundaryModel_Akinci2012();
-			bm->initModel(rigidBody, static_cast<unsigned int>(boundaryParticles.size()), &boundaryParticles[0]);
-			sim->addBoundaryModel(bm);
-		}
-		else if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Koschier2017)
-		{
-			BoundaryModel_Koschier2017 *bm = new BoundaryModel_Koschier2017();
-			bm->initModel(rigidBody);
-			sim->addBoundaryModel(bm);
-			SPH::TriangleMesh &mesh = rigidBody->getGeometry();
-			//m_base->initDensityMap(mesh.getVertices(), mesh.getFaces(), scene.boundaryModels[i], md5, false, bm);
-		}
-		else if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Bender2019)
-		{
-			BoundaryModel_Bender2019 *bm = new BoundaryModel_Bender2019();
-			bm->initModel(rigidBody);
-			sim->addBoundaryModel(bm);
-			SPH::TriangleMesh &mesh = rigidBody->getGeometry();
-			//m_base->initVolumeMap(mesh.getVertices(), mesh.getFaces(), scene.boundaryModels[i], md5, false, bm);
-		}
-		for (unsigned int j = 0; j < geo.numVertices(); j++)
-			geo.getVertices()[j] = scene.boundaryModels[i]->rotation * geo.getVertices()[j] + scene.boundaryModels[i]->translation;
+        rigidBody->setWorldSpacePosition(scene.boundaryModels[i]->translation);
+        rigidBody->setWorldSpaceRotation(scene.boundaryModels[i]->rotation);
+        rigidBody->setPosition(scene.boundaryModels[i]->translation);
+        rigidBody->setRotation(scene.boundaryModels[i]->rotation);
 
-		geo.updateNormals();
-		geo.updateVertexNormals();
-	}
-	sim->performNeighborhoodSearchSort();
-	if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Akinci2012)
-	{
-		m_base->updateBoundaryParticles(false);
-		Simulation::getCurrent()->updateBoundaryVolume();
-	}
+        if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Akinci2012)
+        {
+            BoundaryModel_Akinci2012 *bm = new BoundaryModel_Akinci2012();
+            bm->initModel(rigidBody, static_cast<unsigned int>(boundaryParticles.size()), 
+                         &boundaryParticles[0]);
+            sim->addBoundaryModel(bm);
+        }
+        else if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Koschier2017)
+        {
+            BoundaryModel_Koschier2017 *bm = new BoundaryModel_Koschier2017();
+            bm->initModel(rigidBody);
+            sim->addBoundaryModel(bm);
+        }
+        else if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Bender2019)
+        {
+            BoundaryModel_Bender2019 *bm = new BoundaryModel_Bender2019();
+            bm->initModel(rigidBody);
+            sim->addBoundaryModel(bm);
+        }
+        
+        for (unsigned int j = 0; j < geo.numVertices(); j++)
+            geo.getVertices()[j] = scene.boundaryModels[i]->rotation * geo.getVertices()[j] + 
+                                  scene.boundaryModels[i]->translation;
 
-	m_base->initRbVertixPositions();
+        geo.updateNormals();
+        geo.updateVertexNormals();
+    }
+    
+    sim->performNeighborhoodSearchSort();
+    if (sim->getBoundaryHandlingMethod() == BoundaryHandlingMethods::Akinci2012)
+    {
+        m_base->updateBoundaryParticles(false);
+        Simulation::getCurrent()->updateBoundaryVolume();
+    }
+
+    m_base->initRbVertixPositions();
 #ifdef GPU_NEIGHBORHOOD_SEARCH
-	// copy the particle data to the GPU
-	sim->getNeighborhoodSearch()->update_point_sets();
+    sim->getNeighborhoodSearch()->update_point_sets();
 #endif
 }
